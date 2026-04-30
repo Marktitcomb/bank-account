@@ -1,4 +1,4 @@
-package org.example.model;
+package org.pretend.bank.model;
 
 import org.junit.jupiter.api.Test;
 
