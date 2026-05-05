@@ -8,6 +8,9 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.net.InetSocketAddress;
 
+/**
+ * Simple Http controller exposing bank balance
+ * */
 public class BalanceController {
 
     private static final String BALANCE_RESOURCE = "/pretend-bank/balance";
@@ -23,20 +26,11 @@ public class BalanceController {
     public void startHttpServer(int port) {
         try{
             server = HttpServer.create(new InetSocketAddress(port), 0);
-            server.createContext(BALANCE_RESOURCE, exchange -> {
-               if(! GET.equals(exchange.getRequestMethod())){
-                   exchange.sendResponseHeaders(405, -1);
-                   return;
-               }
-               final byte[] response = getBalanceInBytes();
-               populateHeaders(exchange, response);
-               try (OutputStream os = exchange.getResponseBody()) {
-                   os.write(response);
-               }
-            });
+            createEmptyPathContext(server);
+            createBankBalanceContext(server);
             server.setExecutor(null);
             server.start();
-            System.out.println("starting http server");
+            System.out.println("Started HTTP Server");
         } catch(final IOException ex) {
             throw new RuntimeException("Failed to start HTTP server", ex);
         }
@@ -46,6 +40,31 @@ public class BalanceController {
         if(server != null) {
             server.stop(0);
         }
+    }
+
+    private void createEmptyPathContext(final HttpServer server) {
+        server.createContext("/", exchange -> {
+            if("/".equals(exchange.getRequestURI().getPath()) || exchange.getRequestURI().getPath().isEmpty()) {
+                exchange.getResponseHeaders().set("Location", BALANCE_RESOURCE);
+                exchange.sendResponseHeaders(302, -1);
+                return;
+            }
+            exchange.sendResponseHeaders(404, -1);
+        });
+    }
+
+    private void createBankBalanceContext(final HttpServer server) {
+        server.createContext(BALANCE_RESOURCE, exchange -> {
+            if(! GET.equals(exchange.getRequestMethod())){
+                exchange.sendResponseHeaders(405, -1);
+                return;
+            }
+            final byte[] response = getBalanceInBytes();
+            populateHeaders(exchange, response);
+            try (OutputStream os = exchange.getResponseBody()) {
+                os.write(response);
+            }
+        });
     }
 
     private byte[] getBalanceInBytes() {

@@ -8,7 +8,10 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.mock;
 
 class BankAccountServiceImplTest {
 
@@ -16,7 +19,9 @@ class BankAccountServiceImplTest {
 
     @BeforeEach
     void setUp() {
-        bankAccountServiceimpl = new BankAccountServiceImpl();
+        AuditService auditService = mock(AuditService.class);
+        doNothing().when(auditService).submitForAudit(anyList());
+        bankAccountServiceimpl = new BankAccountServiceImpl(auditService);
     }
 
     @Test

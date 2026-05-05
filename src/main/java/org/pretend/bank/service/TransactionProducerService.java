@@ -6,13 +6,19 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
+/**
+ * Produces credit and debit transactions on two dedicated threads
+ * at a rate of 25 transactions per second
+ * */
 public class TransactionProducerService {
 
     private static final double MIN_AMOUNT = 200.0;
     private static final double MAX_AMOUNT = 500000.0;
 
-    private static final ScheduledExecutorService creditExecutor = Executors.newSingleThreadScheduledExecutor();
-    private static final ScheduledExecutorService debitExecutor = Executors.newSingleThreadScheduledExecutor();
+    private final ScheduledExecutorService creditExecutor = Executors.newSingleThreadScheduledExecutor(
+            r -> new Thread(r, "credit-producer"));
+    private final ScheduledExecutorService debitExecutor = Executors.newSingleThreadScheduledExecutor(
+            r -> new Thread(r, "debit-producer"));
 
     private final int transactionRate;
     private final BankAccountService bankAccountService;

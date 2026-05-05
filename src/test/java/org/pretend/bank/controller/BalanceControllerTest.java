@@ -9,7 +9,8 @@ import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.net.URI;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -34,6 +35,16 @@ class BalanceControllerTest {
     @Test
     void shouldReturnBalanceAsJson() throws IOException {
         HttpURLConnection connection = (HttpURLConnection) URI.create("http://localhost:" + TEST_PORT + "/pretend-bank/balance").toURL().openConnection();
+        connection.setRequestMethod("GET");
+
+        assertEquals(200, connection.getResponseCode());
+        String body = new String(connection.getInputStream().readAllBytes());
+        assertTrue(body.contains("200000.00"));
+    }
+
+    @Test
+    void shouldReturnBalanceAsJsonForBasePath() throws IOException {
+        HttpURLConnection connection = (HttpURLConnection) URI.create("http://localhost:" + TEST_PORT).toURL().openConnection();
         connection.setRequestMethod("GET");
 
         assertEquals(200, connection.getResponseCode());
