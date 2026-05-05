@@ -2,6 +2,9 @@ package org.pretend.bank.model;
 
 import java.util.UUID;
 
+/**
+ * Class to represent a debit or credit in a bank account
+ * */
 public record Transaction(UUID transactionId, double amount) {
 
     private static final int NEGATIVE = -1;
