@@ -19,4 +19,10 @@ public interface BankAccountService {
      * Get the balance from the account
      * */
     double retrieveBalance();
+
+    /**
+     * To be called when application is shutdown to prevent data loss
+     * for transactions stored in memory
+     * */
+    void flushTransactions();
 }

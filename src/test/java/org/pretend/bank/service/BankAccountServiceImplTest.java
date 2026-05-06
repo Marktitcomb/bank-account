@@ -2,24 +2,27 @@ package org.pretend.bank.service;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.pretend.bank.model.Transaction;
 
+import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.anyList;
-import static org.mockito.Mockito.doNothing;
-import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.*;
 
 class BankAccountServiceImplTest {
+
+    AuditService auditService;
 
     private BankAccountServiceImpl bankAccountServiceimpl;
 
     @BeforeEach
     void setUp() {
-        AuditService auditService = mock(AuditService.class);
+        auditService = mock(AuditService.class);
         doNothing().when(auditService).submitForAudit(anyList());
         bankAccountServiceimpl = new BankAccountServiceImpl(auditService);
     }
@@ -62,5 +65,25 @@ class BankAccountServiceImplTest {
         latch.await();
         executorService.shutdown();
         assertEquals(0.0, bankAccountServiceimpl.retrieveBalance());
+    }
+
+    @Test
+    public void shouldFlushRemainingTransactionsOnShutdown() {
+        for(int i = 0; i < 5; i++) {
+            bankAccountServiceimpl.processTransaction(Transaction.credit(100.0));
+        }
+
+        verify(auditService, never()).submitForAudit(anyList());
+        bankAccountServiceimpl.flushTransactions();
+
+        ArgumentCaptor<List> captor = ArgumentCaptor.forClass(List.class);
+        verify(auditService, times(1)).submitForAudit(captor.capture());
+        assertEquals(5, captor.getValue().size());
+    }
+
+    @Test
+    public void shouldNotFlushRemainingTransactionsOnShutdownWhenNoneRemain() {
+        bankAccountServiceimpl.flushTransactions();
+        verify(auditService, never()).submitForAudit(anyList());
     }
 }

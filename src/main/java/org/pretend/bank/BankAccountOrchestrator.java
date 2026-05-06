@@ -29,7 +29,9 @@ public class BankAccountOrchestrator {
 
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
             transactionProducerService.shutdownExecutors();
+            bankAccountService.flushTransactions();
             balanceController.stopHttpServer();
+            System.out.println("Application shutting down");
         }));
     }
 }
