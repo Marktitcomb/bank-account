@@ -5,12 +5,17 @@ import org.pretend.bank.model.Transaction;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.locks.ReentrantLock;
 
 public class BankAccountServiceImpl implements BankAccountService {
 
     private static final int AUDIT_TRANSACTION_COUNT = 1000;
     private double balance = 0.0;
     private final List<Transaction> transactions = new ArrayList<>();
+    private final ReentrantLock lock = new ReentrantLock();
+    private final ExecutorService auditExecutor = Executors.newSingleThreadExecutor();
 
     final AuditService auditService;
 
@@ -19,13 +24,25 @@ public class BankAccountServiceImpl implements BankAccountService {
     }
 
     @Override
-    public synchronized void processTransaction(final Transaction transaction) {
-        balance += transaction.amount();
-        transactions.add(transaction);
-        if(transactions.size() == AUDIT_TRANSACTION_COUNT) {
-            System.out.println(String.format("Received %s transactions, sending batch to Audit", AUDIT_TRANSACTION_COUNT));
-            auditService.submitForAudit(transactions);
-            transactions.clear();
+    public void processTransaction(final Transaction transaction) {
+        List<Transaction> batch = null;
+
+        lock.lock();
+        try{
+            balance += transaction.amount();
+            transactions.add(transaction);
+            if(transactions.size() == AUDIT_TRANSACTION_COUNT) {
+                batch = new ArrayList<>(transactions);
+                System.out.printf("Received %s transactions, sending batch to Audit", AUDIT_TRANSACTION_COUNT);
+                transactions.clear();
+            }
+        } finally {
+            lock.unlock();
+        }
+
+        if(batch != null) {
+            final List<Transaction> batchToSubmit = batch;
+            auditExecutor.submit(() -> auditService.submitForAudit(batchToSubmit));
         }
     }
 
