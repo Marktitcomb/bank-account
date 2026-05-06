@@ -23,15 +23,6 @@ class AuditServiceTest {
     private final AuditService auditService = new AuditService(OBJECT_MAPPER);
 
     @Test
-    void shouldRejectSubmissionsWhereNot1000Transactions() {
-        List<Transaction> transactions  = new ArrayList<>();
-        for(int i = 0; i < 500; i++) {
-            transactions.add(Transaction.credit(250.0));
-        }
-        assertThrows(IllegalArgumentException.class, () -> auditService.submitForAudit(transactions));
-    }
-
-    @Test
     void shouldProcessSubmissionOf1000Transactions() {
         List<Transaction> transactions  = new ArrayList<>();
         for(int i = 0; i < 1000; i++) {

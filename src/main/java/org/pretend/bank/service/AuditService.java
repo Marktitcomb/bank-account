@@ -19,7 +19,6 @@ import java.util.List;
 public class AuditService {
 
     private static final double MAX_BATCH_VALUE = 1_000_000;
-    private static final int AUDIT_TRANSACTION_COUNT = 1000;
     //Chunk size can be used in future to optimize memory
     private static final int CHUNK_SIZE  = 1000;
 
@@ -30,9 +29,6 @@ public class AuditService {
     }
 
     public void submitForAudit(final List<Transaction> transactions) {
-        if (transactions.size() != AUDIT_TRANSACTION_COUNT) {
-            throw new IllegalArgumentException(String.format("Audit submission must include %s transactions", AUDIT_TRANSACTION_COUNT));
-        }
         List<Batch> batches = generateAuditBatches(transactions);
         System.out.println(generateJSONAuditLogs(batches));
     }
@@ -41,14 +37,15 @@ public class AuditService {
      * Function to assigned transactions to batches using first-fit-decreasing algorithm.
      * Chunking is also used sacrificing the optimization of batches to optimize memory
      * by reducing the number of transactions in memory when sorting.
-     * To optimize for batches set CHUNK_SIZE = AUDIT_TRANSACTION_COUNT
+     * To optimize for batches set CHUNK_SIZE = BankAccountService.AUDIT_TRANSACTION_COUNT
      * */
     List<Batch> generateAuditBatches(final List<Transaction> transactions) {
 
         final List<Batch> batches = new ArrayList<>();
+        final int auditTransactionsCount = transactions.size();
 
-        for(int i = 0; i < AUDIT_TRANSACTION_COUNT; i += CHUNK_SIZE) {
-            final int chunkEndIndex = Math.min((i + CHUNK_SIZE), AUDIT_TRANSACTION_COUNT);
+        for(int i = 0; i < auditTransactionsCount; i += CHUNK_SIZE) {
+            final int chunkEndIndex = Math.min((i + CHUNK_SIZE), auditTransactionsCount);
             final List<Transaction> transactionsChunk = new ArrayList<>(transactions.subList(i, chunkEndIndex));
             transactionsChunk.sort(Comparator.comparingDouble(t -> -Math.abs(t.amount())));
 
