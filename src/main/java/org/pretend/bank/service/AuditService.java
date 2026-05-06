@@ -20,6 +20,8 @@ public class AuditService {
 
     private static final double MAX_BATCH_VALUE = 1_000_000;
     private static final int AUDIT_TRANSACTION_COUNT = 1000;
+    //Chunk size can be used in future to optimize memory
+    private static final int CHUNK_SIZE  = 1000;
 
     private final ObjectMapper objectMapper;
 
@@ -35,33 +37,48 @@ public class AuditService {
         System.out.println(generateJSONAuditLogs(batches));
     }
 
+    /**
+     * Function to assigned transactions to batches using first-fit-decreasing algorithm.
+     * Chunking is also used sacrificing the optimization of batches to optimize memory
+     * by reducing the number of transactions in memory when sorting.
+     * To optimize for batches set CHUNK_SIZE = AUDIT_TRANSACTION_COUNT
+     * */
     List<Batch> generateAuditBatches(final List<Transaction> transactions) {
 
-        List<Transaction> sortedTransactionsDesc = new ArrayList<>(transactions);
-        sortedTransactionsDesc.sort(Comparator.comparingDouble(t -> -Math.abs(t.amount())));
-
         final List<Batch> batches = new ArrayList<>();
-        for(final Transaction transaction: transactions) {
-            double transactionValue = Math.abs(transaction.amount());
-            boolean placed = false;
 
-            for(final Batch batch : batches) {
-                if(batch.totalValue + transactionValue <= MAX_BATCH_VALUE) {
-                    batch.totalValue += transactionValue;
-                    batch.transactions.add(transaction);
-                    placed = true;
-                    break;
-                }
-            }
+        for(int i = 0; i < AUDIT_TRANSACTION_COUNT; i += CHUNK_SIZE) {
+            final int chunkEndIndex = Math.min((i + CHUNK_SIZE), AUDIT_TRANSACTION_COUNT);
+            final List<Transaction> transactionsChunk = new ArrayList<>(transactions.subList(i, chunkEndIndex));
+            transactionsChunk.sort(Comparator.comparingDouble(t -> -Math.abs(t.amount())));
 
-            if(! placed) {
-                final Batch batch = new Batch();
-                batch.totalValue = transactionValue;
-                batch.transactions.add(transaction);
-                batches.add(batch);
+            for(final Transaction transaction: transactionsChunk) {
+                placeTransactionInBatch(batches, transaction);
             }
         }
+
         return batches;
+    }
+
+    private void placeTransactionInBatch(final List<Batch> batches, final Transaction transaction) {
+        double transactionValue = Math.abs(transaction.amount());
+        boolean placed = false;
+
+        for(final Batch batch : batches) {
+            if(batch.totalValue + transactionValue <= MAX_BATCH_VALUE) {
+                batch.totalValue += transactionValue;
+                batch.transactions.add(transaction);
+                placed = true;
+                break;
+            }
+        }
+
+        if(! placed) {
+            final Batch batch = new Batch();
+            batch.totalValue = transactionValue;
+            batch.transactions.add(transaction);
+            batches.add(batch);
+        }
     }
 
     String generateJSONAuditLogs(final List<Batch> batches) {
